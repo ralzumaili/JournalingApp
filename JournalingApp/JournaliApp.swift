@@ -1,8 +1,8 @@
 //
-//  JournalingAppApp.swift
+//  JournaliApp.swift
 //  JournalingApp
 //
-//  Created by Rawa ♡♥ رَواء  on 29/05/1448 AH.
+//  ✦ Created by Rawa on 29/05/1448 AH.
 //
 
 import SwiftUI
