@@ -16,9 +16,28 @@ struct ContentView: View {
 
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \JournalEntry.createdAt, order: .reverse) private var entries: [JournalEntry]
-    @State private var showsNewJournal = false
+    @State private var editorSession: EditorSession?
     @State private var searchText = ""
     @State private var selectedResult: SearchResult?
+
+    // MARK: - Screen Routes
+
+    /// Captures the original fields each time the editor opens.
+    private struct EditorSession: Identifiable {
+        let id = UUID()
+        let entry: JournalEntry?
+        let initialDraft: JournalDraft
+        let createdAt: Date
+
+        init(entry: JournalEntry? = nil) {
+            self.entry = entry
+            initialDraft = JournalDraft(
+                title: entry?.title ?? "",
+                content: entry?.content ?? ""
+            )
+            createdAt = entry?.createdAt ?? .now
+        }
+    }
 
     private struct SearchResult: Hashable {
         let entry: JournalEntry
@@ -38,7 +57,7 @@ struct ContentView: View {
                 .toolbar {
                     ToolbarItem(placement: .topBarTrailing) {
                         Button("New Journal", systemImage: "plus") {
-                            showsNewJournal = true
+                            editorSession = EditorSession()
                         }
                         .labelStyle(.iconOnly)
                     }
@@ -48,14 +67,14 @@ struct ContentView: View {
                 .navigationDestination(item: $selectedResult) { result in
                     JournalSearchResultView(entry: result.entry, search: result.search)
                 }
-                .sheet(isPresented: $showsNewJournal) {
-                    JournalEditorView { draft, date in
-                        try JournalViewModel(modelContext: modelContext)
-                            .add(draft, createdAt: date)
-                    }
-                    .presentationDragIndicator(.visible)
-                    .presentationBackground(AppTheme.Colors.card)
-                }
+        }
+        .sheet(item: $editorSession) { session in
+            JournalEditorView(initialDraft: session.initialDraft, createdAt: session.createdAt) { draft in
+                try JournalViewModel(modelContext: modelContext)
+                    .save(draft, editing: session.entry, createdAt: session.createdAt)
+            }
+            .presentationDragIndicator(.visible)
+            .presentationBackground(AppTheme.Colors.card)
         }
         .preferredColorScheme(.dark)
     }
@@ -85,18 +104,17 @@ struct ContentView: View {
 
     // MARK: - Journal Row
 
-    @ViewBuilder
     private func journalRow(for entry: JournalEntry, search: JournalSearch) -> some View {
-        if search.isActive {
-            Button {
+        Button {
+            if search.isActive {
                 selectedResult = SearchResult(entry: entry, search: search)
-            } label: {
-                JournalCardView(entry: entry, search: search)
+            } else {
+                editorSession = EditorSession(entry: entry)
             }
-            .buttonStyle(.plain)
-        } else {
-            JournalCardView(entry: entry)
+        } label: {
+            JournalCardView(entry: entry, search: search)
         }
+        .buttonStyle(.plain)
     }
 }
 

@@ -26,22 +26,28 @@ struct JournalViewModel {
             || !draft.content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
-    // MARK: - Create Entry
+    // MARK: - Save Entry
 
-    func add(_ draft: JournalDraft, createdAt: Date) throws {
+    func save(_ draft: JournalDraft, editing entry: JournalEntry?, createdAt: Date) throws {
         guard Self.canSave(draft) else { throw SaveError.emptyDraft }
 
-        let entry = JournalEntry(
-            title: draft.title.trimmingCharacters(in: .whitespacesAndNewlines),
-            content: draft.content,
-            createdAt: createdAt
-        )
-        modelContext.insert(entry)
+        let title = draft.title.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if let entry {
+            entry.title = title
+            entry.content = draft.content
+        } else {
+            modelContext.insert(JournalEntry(
+                title: title,
+                content: draft.content,
+                createdAt: createdAt
+            ))
+        }
 
         do {
             try modelContext.save()
         } catch {
-            // Remove the pending insert so the user can retry the same draft.
+            // Restore the stored entry or remove the pending insert if saving fails.
             modelContext.rollback()
             throw error
         }

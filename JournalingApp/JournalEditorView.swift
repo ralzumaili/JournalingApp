@@ -11,16 +11,32 @@ import SwiftUI
 
 /// Keeps the draft open until saving succeeds or the user discards it.
 struct JournalEditorView: View {
-    let onSave: (JournalDraft, Date) throws -> Void
+    let initialDraft: JournalDraft
+    let createdAt: Date
+    let onSave: (JournalDraft) throws -> Void
 
     // MARK: - Editor State
 
     @Environment(\.dismiss) private var dismiss
-    @State private var draft = JournalDraft()
-    @State private var createdAt = Date.now
+    @State private var draft: JournalDraft
     @State private var showsDiscardAlert = false
     @State private var showsSaveError = false
     @FocusState private var isTitleFocused: Bool
+
+    // MARK: - Initialization
+
+    init(
+        initialDraft: JournalDraft,
+        createdAt: Date,
+        onSave: @escaping (JournalDraft) throws -> Void
+    ) {
+        self.initialDraft = initialDraft
+        self.createdAt = createdAt
+        self.onSave = onSave
+        _draft = State(initialValue: initialDraft)
+    }
+
+    private var hasChanges: Bool { draft != initialDraft }
 
     // MARK: - View Body
 
@@ -41,11 +57,11 @@ struct JournalEditorView: View {
                             .labelStyle(.iconOnly)
                             .buttonStyle(.glassProminent)
                             .tint(AppTheme.Colors.accent)
-                            .disabled(!JournalViewModel.canSave(draft))
+                            .disabled(!hasChanges || !JournalViewModel.canSave(draft))
                     }
                 }
         }
-        .interactiveDismissDisabled(draft != JournalDraft())
+        .interactiveDismissDisabled(hasChanges)
         .task { isTitleFocused = true }
         .alert("Discard Changes?", isPresented: $showsDiscardAlert) {
             Button("Discard Changes", role: .destructive) { dismiss() }
@@ -94,16 +110,16 @@ struct JournalEditorView: View {
     // MARK: - Editor Actions
 
     private func close() {
-        if draft == JournalDraft() {
-            dismiss()
-        } else {
+        if hasChanges {
             showsDiscardAlert = true
+        } else {
+            dismiss()
         }
     }
 
     private func save() {
         do {
-            try onSave(draft, createdAt)
+            try onSave(draft)
             dismiss()
         } catch {
             showsSaveError = true
