@@ -19,6 +19,8 @@ struct ContentView: View {
     @State private var editorSession: EditorSession?
     @State private var searchText = ""
     @State private var selectedResult: SearchResult?
+    @State private var entryPendingDeletion: JournalEntry?
+    @State private var showsDeleteError = false
 
     // MARK: - Screen Routes
 
@@ -77,6 +79,21 @@ struct ContentView: View {
             .presentationBackground(AppTheme.Colors.card)
         }
         .preferredColorScheme(.dark)
+        .alert(
+            "Delete Journal?",
+            isPresented: isConfirmingDeletion,
+            presenting: entryPendingDeletion
+        ) { entry in
+            Button("Cancel", role: .cancel) {}
+            Button("Delete", role: .destructive) { delete(entry) }
+        } message: { _ in
+            Text("Are you sure you want to delete this journal?")
+        }
+        .alert("Couldn't Delete Journal", isPresented: $showsDeleteError) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("The journal is still saved. Try deleting it again.")
+        }
     }
 
     // MARK: - Journal Content
@@ -96,6 +113,12 @@ struct ContentView: View {
                     .listRowInsets(EdgeInsets(top: 8, leading: 20, bottom: 8, trailing: 20))
                     .listRowSeparator(.hidden)
                     .listRowBackground(Color.clear)
+                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                        Button("Delete Journal", systemImage: "trash.fill") {
+                            entryPendingDeletion = entry
+                        }
+                        .tint(AppTheme.Colors.destructive)
+                    }
             }
             .listStyle(.plain)
             .scrollContentBackground(.hidden)
@@ -115,6 +138,28 @@ struct ContentView: View {
             JournalCardView(entry: entry, search: search)
         }
         .buttonStyle(.plain)
+    }
+
+    // MARK: - Delete Confirmation
+
+    /// Presents the alert while a journal is selected for deletion.
+    private var isConfirmingDeletion: Binding<Bool> {
+        Binding(
+            get: { entryPendingDeletion != nil },
+            set: { isPresented in
+                if !isPresented {
+                    entryPendingDeletion = nil
+                }
+            }
+        )
+    }
+
+    private func delete(_ entry: JournalEntry) {
+        do {
+            try JournalViewModel(modelContext: modelContext).delete(entry)
+        } catch {
+            showsDeleteError = true
+        }
     }
 }
 

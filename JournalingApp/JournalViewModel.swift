@@ -10,7 +10,7 @@ import SwiftData
 
 // MARK: - Journal View Model
 
-/// Applies validation and saves journal changes on the main context.
+/// Validates and persists journal changes on the main context.
 @MainActor
 struct JournalViewModel {
     let modelContext: ModelContext
@@ -44,10 +44,23 @@ struct JournalViewModel {
             ))
         }
 
+        try saveChanges()
+    }
+
+    // MARK: - Delete Entry
+
+    func delete(_ entry: JournalEntry) throws {
+        modelContext.delete(entry)
+        try saveChanges()
+    }
+
+    // MARK: - Persistence
+
+    private func saveChanges() throws {
         do {
             try modelContext.save()
         } catch {
-            // Restore the stored entry or remove the pending insert if saving fails.
+            // Restore the last saved state if the write fails.
             modelContext.rollback()
             throw error
         }
