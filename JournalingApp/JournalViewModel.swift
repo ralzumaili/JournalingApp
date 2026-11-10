@@ -8,9 +8,21 @@
 import Foundation
 import SwiftData
 
+// MARK: - Journal List Options
+
+enum JournalFilter: String, CaseIterable {
+    case all = "All Journals"
+    case bookmarked = "Bookmarked Only"
+}
+
+enum JournalSort: String, CaseIterable {
+    case newestFirst = "Newest First"
+    case oldestFirst = "Oldest First"
+}
+
 // MARK: - Journal View Model
 
-/// Validates and persists journal changes on the main context.
+/// Filters entries for display and persists journal changes.
 @MainActor
 struct JournalViewModel {
     let modelContext: ModelContext
@@ -24,6 +36,25 @@ struct JournalViewModel {
     static func canSave(_ draft: JournalDraft) -> Bool {
         !draft.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             || !draft.content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    // MARK: - Filter and Sort
+
+    static func visibleEntries(
+        _ entries: [JournalEntry],
+        matching query: JournalSearch,
+        filter: JournalFilter,
+        sort: JournalSort
+    ) -> [JournalEntry] {
+        let candidates = filter == .bookmarked ? entries.filter(\.isBookmarked) : entries
+        return search(candidates, using: query).sorted { first, second in
+            switch sort {
+            case .newestFirst:
+                first.createdAt > second.createdAt
+            case .oldestFirst:
+                first.createdAt < second.createdAt
+            }
+        }
     }
 
     // MARK: - Save Entry
@@ -51,6 +82,13 @@ struct JournalViewModel {
 
     func delete(_ entry: JournalEntry) throws {
         modelContext.delete(entry)
+        try saveChanges()
+    }
+
+    // MARK: - Bookmark
+
+    func toggleBookmark(for entry: JournalEntry) throws {
+        entry.isBookmarked.toggle()
         try saveChanges()
     }
 

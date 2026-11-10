@@ -15,12 +15,14 @@ struct ContentView: View {
     // MARK: - Journal State
 
     @Environment(\.modelContext) private var modelContext
-    @Query(sort: \JournalEntry.createdAt, order: .reverse) private var entries: [JournalEntry]
+    @Query private var entries: [JournalEntry]
     @State private var editorSession: EditorSession?
     @State private var searchText = ""
+    @State private var filter: JournalFilter = .all
+    @State private var sort: JournalSort = .newestFirst
     @State private var selectedResult: SearchResult?
     @State private var entryPendingDeletion: JournalEntry?
-    @State private var showsDeleteError = false
+    @State private var showsWriteError = false
 
     // MARK: - Screen Routes
 
@@ -56,16 +58,7 @@ struct ContentView: View {
                 .navigationTitle("Journal")
                 .navigationBarTitleDisplayMode(.large)
                 .searchable(text: $searchText, placement: .toolbar, prompt: "Search")
-                .toolbar {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button("New Journal", systemImage: "plus") {
-                            editorSession = EditorSession()
-                        }
-                        .labelStyle(.iconOnly)
-                    }
-
-                    DefaultToolbarItem(kind: .search, placement: .bottomBar)
-                }
+                .toolbar { journalToolbar }
                 .navigationDestination(item: $selectedResult) { result in
                     JournalSearchResultView(entry: result.entry, search: result.search)
                 }
@@ -89,11 +82,48 @@ struct ContentView: View {
         } message: { _ in
             Text("Are you sure you want to delete this journal?")
         }
-        .alert("Couldn't Delete Journal", isPresented: $showsDeleteError) {
+        .alert("Couldn't Save Changes", isPresented: $showsWriteError) {
             Button("OK", role: .cancel) {}
         } message: {
-            Text("The journal is still saved. Try deleting it again.")
+            Text("Please try again.")
         }
+    }
+
+    // MARK: - Journal Toolbar
+
+    @ToolbarContentBuilder
+    private var journalToolbar: some ToolbarContent {
+        ToolbarItemGroup(placement: .topBarTrailing) {
+            Menu {
+                Section("Show") {
+                    Picker("Show Journals", selection: $filter) {
+                        ForEach(JournalFilter.allCases, id: \.self) { option in
+                            Text(option.rawValue).tag(option)
+                        }
+                    }
+                }
+
+                Section("Sort by Entry Date") {
+                    Picker("Sort by Entry Date", selection: $sort) {
+                        ForEach(JournalSort.allCases, id: \.self) { option in
+                            Text(option.rawValue).tag(option)
+                        }
+                    }
+                }
+            } label: {
+                Label("Filter Journals", systemImage: "line.3.horizontal.decrease")
+            }
+            .labelStyle(.iconOnly)
+            .tint(filter == .bookmarked ? AppTheme.Colors.textAccent : nil)
+            .accessibilityValue(filter.rawValue)
+
+            Button("New Journal", systemImage: "plus") {
+                editorSession = EditorSession()
+            }
+            .labelStyle(.iconOnly)
+        }
+
+        DefaultToolbarItem(kind: .search, placement: .bottomBar)
     }
 
     // MARK: - Journal Content
@@ -101,12 +131,23 @@ struct ContentView: View {
     @ViewBuilder
     private var journalContent: some View {
         let search = JournalSearch(searchText)
-        let visibleEntries = JournalViewModel.search(entries, using: search)
+        let visibleEntries = JournalViewModel.visibleEntries(
+            entries,
+            matching: search,
+            filter: filter,
+            sort: sort
+        )
 
         if search.isActive && visibleEntries.isEmpty {
             ContentUnavailableView.search(text: search.term)
         } else if entries.isEmpty {
             JournalEmptyStateView()
+        } else if visibleEntries.isEmpty {
+            ContentUnavailableView(
+                "No Bookmarked Journals",
+                systemImage: "bookmark",
+                description: Text("Bookmark a journal to find it here.")
+            )
         } else {
             List(visibleEntries) { entry in
                 journalRow(for: entry, search: search)
@@ -128,16 +169,28 @@ struct ContentView: View {
     // MARK: - Journal Row
 
     private func journalRow(for entry: JournalEntry, search: JournalSearch) -> some View {
-        Button {
-            if search.isActive {
-                selectedResult = SearchResult(entry: entry, search: search)
-            } else {
-                editorSession = EditorSession(entry: entry)
-            }
-        } label: {
-            JournalCardView(entry: entry, search: search)
+        JournalCardView(
+            entry: entry,
+            search: search,
+            onOpen: {
+                if search.isActive {
+                    selectedResult = SearchResult(entry: entry, search: search)
+                } else {
+                    editorSession = EditorSession(entry: entry)
+                }
+            },
+            onToggleBookmark: { toggleBookmark(for: entry) }
+        )
+    }
+
+    // MARK: - Bookmark Action
+
+    private func toggleBookmark(for entry: JournalEntry) {
+        do {
+            try JournalViewModel(modelContext: modelContext).toggleBookmark(for: entry)
+        } catch {
+            showsWriteError = true
         }
-        .buttonStyle(.plain)
     }
 
     // MARK: - Delete Confirmation
@@ -158,7 +211,7 @@ struct ContentView: View {
         do {
             try JournalViewModel(modelContext: modelContext).delete(entry)
         } catch {
-            showsDeleteError = true
+            showsWriteError = true
         }
     }
 }
