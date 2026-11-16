@@ -20,7 +20,6 @@ struct ContentView: View {
     @State private var searchText = ""
     @State private var filter: JournalFilter = .all
     @State private var sort: JournalSort = .newestFirst
-    @State private var selectedResult: SearchResult?
     @State private var entryPendingDeletion: JournalEntry?
     @State private var showsWriteError = false
 
@@ -42,12 +41,7 @@ struct ContentView: View {
             createdAt = entry?.createdAt ?? .now
         }
     }
-
-    private struct SearchResult: Hashable {
-        let entry: JournalEntry
-        let search: JournalSearch
-    }
-
+    
     // MARK: - View Body
 
     var body: some View {
@@ -59,15 +53,6 @@ struct ContentView: View {
                 .navigationBarTitleDisplayMode(.large)
                 .searchable(text: $searchText, placement: .toolbar, prompt: "Search")
                 .toolbar { journalToolbar }
-                .navigationDestination(item: $selectedResult) { result in
-                    JournalSearchResultView(
-                        display: JournalDisplayData(
-                            entry: result.entry,
-                            search: result.search,
-                            showsExcerpt: false
-                        )
-                    )
-                }
         }
         .sheet(item: $editorSession) { session in
             JournalEditorView(initialDraft: session.initialDraft, createdAt: session.createdAt) { draft in
@@ -178,13 +163,7 @@ struct ContentView: View {
     private func journalRow(for entry: JournalEntry, search: JournalSearch) -> some View {
         JournalCardView(
             display: JournalDisplayData(entry: entry, search: search, showsExcerpt: true),
-            onOpen: {
-                if search.isActive {
-                    selectedResult = SearchResult(entry: entry, search: search)
-                } else {
-                    editorSession = EditorSession(entry: entry)
-                }
-            },
+            onOpen: { editorSession = EditorSession(entry: entry) },
             onToggleBookmark: { toggleBookmark(for: entry) }
         )
     }
