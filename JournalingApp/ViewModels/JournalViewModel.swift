@@ -20,6 +20,34 @@ enum JournalSort: String, CaseIterable {
     case oldestFirst = "Oldest First"
 }
 
+// MARK: - Journal Display Data
+/// Prepares an entry for display without depending on SwiftUI.
+
+struct JournalDisplayData {
+    struct HighlightedText {
+        let text: String
+        let matches: [Range<String.Index>]
+
+        init(_ text: String, matching search: JournalSearch) {
+            self.text = text
+            matches = search.ranges(in: text)
+        }
+    }
+
+    let title: HighlightedText
+    let content: HighlightedText
+    let createdAt: Date
+    let isBookmarked: Bool
+
+    init(entry: JournalEntry, search: JournalSearch, showsExcerpt: Bool) {
+        title = HighlightedText(entry.title.isEmpty ? "Untitled" : entry.title, matching: search)
+        let text = showsExcerpt ? search.excerpt(from: entry.content) : entry.content
+        content = HighlightedText(text, matching: search)
+        createdAt = entry.createdAt
+        isBookmarked = entry.isBookmarked
+    }
+}
+
 // MARK: - Journal View Model
 
 /// Filters entries for display and persists journal changes.
@@ -36,6 +64,16 @@ struct JournalViewModel {
     static func canSave(_ draft: JournalDraft) -> Bool {
         !draft.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             || !draft.content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    // MARK: - Editor Rules
+
+    static func hasUnsavedChanges(_ draft: JournalDraft, comparedTo original: JournalDraft) -> Bool {
+        draft != original
+    }
+
+    static func canSaveChanges(_ draft: JournalDraft, comparedTo original: JournalDraft) -> Bool {
+        hasUnsavedChanges(draft, comparedTo: original) && canSave(draft)
     }
 
     // MARK: - Filter and Sort
@@ -55,6 +93,28 @@ struct JournalViewModel {
                 first.createdAt < second.createdAt
             }
         }
+    }
+
+    // MARK: - Journal List State
+
+    enum ListState {
+        case noSearchResults(term: String)
+        case emptyJournal
+        case noBookmarks
+        case entries([JournalEntry])
+    }
+
+    static func listState(
+        for entries: [JournalEntry],
+        matching query: JournalSearch,
+        filter: JournalFilter,
+        sort: JournalSort
+    ) -> ListState {
+        let results = visibleEntries(entries, matching: query, filter: filter, sort: sort)
+
+        if !results.isEmpty { return .entries(results) }
+        if query.isActive { return .noSearchResults(term: query.term) }
+        return entries.isEmpty ? .emptyJournal : .noBookmarks
     }
 
     // MARK: - Save Entry

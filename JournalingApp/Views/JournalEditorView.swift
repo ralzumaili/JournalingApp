@@ -8,8 +8,8 @@
 import SwiftUI
 
 // MARK: - Journal Editor
-
 /// Keeps the draft open until saving succeeds or the user discards it.
+
 struct JournalEditorView: View {
     let initialDraft: JournalDraft
     let createdAt: Date
@@ -36,7 +36,15 @@ struct JournalEditorView: View {
         _draft = State(initialValue: initialDraft)
     }
 
-    private var hasChanges: Bool { draft != initialDraft }
+    // MARK: - Editor Presentation
+
+    private var hasChanges: Bool {
+        JournalViewModel.hasUnsavedChanges(draft, comparedTo: initialDraft)
+    }
+
+    private var isSaveEnabled: Bool {
+        JournalViewModel.canSaveChanges(draft, comparedTo: initialDraft)
+    }
 
     // MARK: - View Body
 
@@ -57,7 +65,7 @@ struct JournalEditorView: View {
                             .labelStyle(.iconOnly)
                             .buttonStyle(.glassProminent)
                             .tint(AppTheme.Colors.accent)
-                            .disabled(!hasChanges || !JournalViewModel.canSave(draft))
+                            .disabled(!isSaveEnabled)
                     }
                 }
         }

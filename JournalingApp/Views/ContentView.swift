@@ -60,7 +60,13 @@ struct ContentView: View {
                 .searchable(text: $searchText, placement: .toolbar, prompt: "Search")
                 .toolbar { journalToolbar }
                 .navigationDestination(item: $selectedResult) { result in
-                    JournalSearchResultView(entry: result.entry, search: result.search)
+                    JournalSearchResultView(
+                        display: JournalDisplayData(
+                            entry: result.entry,
+                            search: result.search,
+                            showsExcerpt: false
+                        )
+                    )
                 }
         }
         .sheet(item: $editorSession) { session in
@@ -131,25 +137,26 @@ struct ContentView: View {
     @ViewBuilder
     private var journalContent: some View {
         let search = JournalSearch(searchText)
-        let visibleEntries = JournalViewModel.visibleEntries(
-            entries,
+        let listState = JournalViewModel.listState(
+            for: entries,
             matching: search,
             filter: filter,
             sort: sort
         )
 
-        if search.isActive && visibleEntries.isEmpty {
-            ContentUnavailableView.search(text: search.term)
-        } else if entries.isEmpty {
+        switch listState {
+        case .noSearchResults(let term):
+            ContentUnavailableView.search(text: term)
+        case .emptyJournal:
             JournalEmptyStateView()
-        } else if visibleEntries.isEmpty {
+        case .noBookmarks:
             ContentUnavailableView(
                 "No Bookmarked Journals",
                 systemImage: "bookmark",
                 description: Text("Bookmark a journal to find it here.")
             )
-        } else {
-            List(visibleEntries) { entry in
+        case .entries(let entries):
+            List(entries) { entry in
                 journalRow(for: entry, search: search)
                     .listRowInsets(EdgeInsets(top: 8, leading: 20, bottom: 8, trailing: 20))
                     .listRowSeparator(.hidden)
@@ -170,8 +177,7 @@ struct ContentView: View {
 
     private func journalRow(for entry: JournalEntry, search: JournalSearch) -> some View {
         JournalCardView(
-            entry: entry,
-            search: search,
+            display: JournalDisplayData(entry: entry, search: search, showsExcerpt: true),
             onOpen: {
                 if search.isActive {
                     selectedResult = SearchResult(entry: entry, search: search)

@@ -8,11 +8,10 @@
 import SwiftUI
 
 // MARK: - Journal Card
-
 /// Shows a saved entry with separate controls for opening and bookmarking it.
+
 struct JournalCardView: View {
-    let entry: JournalEntry
-    let search: JournalSearch
+    let display: JournalDisplayData
     let onOpen: () -> Void
     let onToggleBookmark: () -> Void
 
@@ -49,21 +48,18 @@ struct JournalCardView: View {
     private var cardContent: some View {
         VStack(alignment: .leading, spacing: 20) {
             VStack(alignment: .leading, spacing: 6) {
-                JournalHighlightedText(
-                    text: entry.title.isEmpty ? "Untitled" : entry.title,
-                    search: search
-                )
+                JournalHighlightedText(display: display.title)
                 .font(AppTheme.Typography.cardTitle)
                 .foregroundStyle(AppTheme.Colors.textAccent)
 
-                Text(entry.createdAt, format: .dateTime.day(.twoDigits).month(.twoDigits).year())
+                Text(display.createdAt, format: .dateTime.day(.twoDigits).month(.twoDigits).year())
                     .font(AppTheme.Typography.smallCaption)
                     .foregroundStyle(AppTheme.Colors.textSecondary)
             }
             .padding(.trailing, Layout.bookmarkSize)
 
-            if !entry.content.isEmpty {
-                JournalHighlightedText(text: search.excerpt(from: entry.content), search: search)
+            if !display.content.text.isEmpty {
+                JournalHighlightedText(display: display.content)
                     .font(AppTheme.Typography.mediumBody)
                     .foregroundStyle(AppTheme.Colors.textPrimary)
                     .lineLimit(5)
@@ -77,13 +73,13 @@ struct JournalCardView: View {
 
     private var bookmarkButton: some View {
         Button(action: onToggleBookmark) {
-            Image(systemName: entry.isBookmarked ? "bookmark.fill" : "bookmark")
+            Image(systemName: display.isBookmarked ? "bookmark.fill" : "bookmark")
                 .font(AppTheme.Typography.cardTitle)
                 .foregroundStyle(AppTheme.Colors.textAccent)
                 .frame(width: Layout.bookmarkSize, height: Layout.bookmarkSize)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(entry.isBookmarked ? "Remove Bookmark" : "Bookmark Journal")
+        .accessibilityLabel(display.isBookmarked ? "Remove Bookmark" : "Bookmark Journal")
     }
 }

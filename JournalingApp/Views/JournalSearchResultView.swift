@@ -11,27 +11,23 @@ import SwiftUI
 /// Shows the complete entry with the query captured when the result was opened.
 
 struct JournalSearchResultView: View {
-    let entry: JournalEntry
-    let search: JournalSearch
+    let display: JournalDisplayData
 
     // MARK: - View Body
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                JournalHighlightedText(
-                    text: entry.title.isEmpty ? "Untitled" : entry.title,
-                    search: search
-                )
+                JournalHighlightedText(display: display.title)
                 .font(AppTheme.Typography.largeHeading)
                 .foregroundStyle(AppTheme.Colors.textAccent)
                 .accessibilityAddTraits(.isHeader)
 
-                Text(entry.createdAt, format: .dateTime.day(.twoDigits).month(.twoDigits).year())
+                Text(display.createdAt, format: .dateTime.day(.twoDigits).month(.twoDigits).year())
                     .font(AppTheme.Typography.smallCaption)
                     .foregroundStyle(AppTheme.Colors.textSecondary)
 
-                JournalHighlightedText(text: entry.content, search: search)
+                JournalHighlightedText(display: display.content)
                     .font(AppTheme.Typography.mediumBody)
                     .foregroundStyle(AppTheme.Colors.textPrimary)
                     .textSelection(.enabled)
@@ -48,17 +44,16 @@ struct JournalSearchResultView: View {
 /// Styles every matching range while keeping the original text intact.
 
 struct JournalHighlightedText: View {
-    let text: String
-    let search: JournalSearch
+    let display: JournalDisplayData.HighlightedText
 
     var body: some View {
         Text(highlightedText)
     }
 
     private var highlightedText: AttributedString {
-        var result = AttributedString(text)
+        var result = AttributedString(display.text)
 
-        for match in search.ranges(in: text) {
+        for match in display.matches {
             guard let range = Range(match, in: result) else { continue }
             result[range].backgroundColor = AppTheme.Colors.textAccent
             result[range].foregroundColor = AppTheme.Colors.background

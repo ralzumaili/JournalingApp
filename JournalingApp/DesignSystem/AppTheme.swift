@@ -13,8 +13,8 @@ import SwiftUI
 enum AppTheme {
 
     // MARK: - Colors
-    /// Uses the color symbols Xcode generates from Assets.xcassets.
-
+    /// Uses the color symbols generated from Assets.xcassets.
+    
     enum Colors {
         static let accent = Color(.accent)
         static let textAccent = Color(.textAccent)
@@ -26,23 +26,16 @@ enum AppTheme {
     }
 
     // MARK: - Typography
-    /// Uses the SF Pro sizes and weights from the design system.
+    /// Uses system text styles that follow the user's Dynamic Type setting.
 
     enum Typography {
-
-        // Headings and Titles
-        static let display = Font.system(size: 42, weight: .black)
-        static let largeHeading = Font.system(size: 34, weight: .bold)
-        static let mediumHeading = Font.system(size: 24, weight: .bold)
-        static let cardTitle = Font.system(size: 24, weight: .semibold)
-
-        // Body Text
-        static let largeBody = Font.system(size: 20, weight: .regular)
-        static let mediumBody = Font.system(size: 18, weight: .regular)
-        static let supportingBody = Font.system(size: 18, weight: .light)
-
-        // Captions
-        static let mediumCaption = Font.system(size: 16, weight: .regular)
-        static let smallCaption = Font.system(size: 14, weight: .regular)
+        static let display = Font.largeTitle.weight(.black)
+        static let largeHeading = Font.largeTitle.bold()
+        static let mediumHeading = Font.title2.bold()
+        static let cardTitle = Font.title2.weight(.semibold)
+        static let mediumBody = Font.body
+        static let supportingBody = Font.body.weight(.light)
+        static let mediumCaption = Font.callout
+        static let smallCaption = Font.footnote
     }
 }
