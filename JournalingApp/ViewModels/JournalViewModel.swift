@@ -39,10 +39,13 @@ struct JournalDisplayData {
     let createdAt: Date
     let isBookmarked: Bool
 
-    init(entry: JournalEntry, search: JournalSearch, showsExcerpt: Bool) {
+    init(entry: JournalEntry, search: JournalSearch) {
         title = HighlightedText(entry.title.isEmpty ? "Untitled" : entry.title, matching: search)
-        let text = showsExcerpt ? search.excerpt(from: entry.content) : entry.content
+
+        // Find highlights in the excerpt shown on the card.
+        let text = search.excerpt(from: entry.content)
         content = HighlightedText(text, matching: search)
+
         createdAt = entry.createdAt
         isBookmarked = entry.isBookmarked
     }

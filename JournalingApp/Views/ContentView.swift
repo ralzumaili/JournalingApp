@@ -162,8 +162,7 @@ struct ContentView: View {
 
     private func journalRow(for entry: JournalEntry, search: JournalSearch) -> some View {
         JournalCardView(
-            display: JournalDisplayData(entry: entry, search: search, showsExcerpt: true),
-            onOpen: { editorSession = EditorSession(entry: entry) },
+            display: JournalDisplayData(entry: entry, search: search),            onOpen: { editorSession = EditorSession(entry: entry) },
             onToggleBookmark: { toggleBookmark(for: entry) }
         )
     }
