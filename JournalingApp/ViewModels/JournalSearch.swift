@@ -8,8 +8,8 @@
 import Foundation
 
 // MARK: - Journal Search
-
 /// Shares one matching rule between results, excerpts, and highlights.
+
 struct JournalSearch: Hashable {
     let term: String
 

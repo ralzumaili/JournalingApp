@@ -15,6 +15,7 @@ struct ContentView: View {
     // MARK: - Journal State
 
     @Environment(\.modelContext) private var modelContext
+    
     @Query private var entries: [JournalEntry]
     @State private var editorSession: EditorSession?
     @State private var searchText = ""
@@ -24,8 +25,8 @@ struct ContentView: View {
     @State private var showsWriteError = false
 
     // MARK: - Screen Routes
-
     /// Captures the original fields each time the editor opens.
+
     private struct EditorSession: Identifiable {
         let id = UUID()
         let entry: JournalEntry?
@@ -178,8 +179,8 @@ struct ContentView: View {
     }
 
     // MARK: - Delete Confirmation
-
     /// Presents the alert while a journal is selected for deletion.
+
     private var isConfirmingDeletion: Binding<Bool> {
         Binding(
             get: { entryPendingDeletion != nil },

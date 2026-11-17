@@ -6,8 +6,8 @@
 //
 
 // MARK: - Journal Draft
-
 /// Holds a temporary copy of the journal fields while the user edits.
+
 struct JournalDraft: Equatable {
 
     // MARK: - Editable Fields

@@ -52,8 +52,8 @@ struct JournalDisplayData {
 }
 
 // MARK: - Journal View Model
-
 /// Filters entries for display and persists journal changes.
+
 @MainActor
 struct JournalViewModel {
     let modelContext: ModelContext
